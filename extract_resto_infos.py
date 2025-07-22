@@ -1,11 +1,11 @@
 import json
 import os
-import googlemaps
-from googlemaps.exceptions import ApiError, TransportError, Timeout
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+from time import sleep
 
-# Initialize Google Maps client 
-API_KEY = 'AIzaSyAXTIIKh8BQkXqtXbWVd4swhyv2W7lasyY' 
-gmaps = googlemaps.Client(key=API_KEY)
+# Initialize Nominatim API with a custom user agent
+geolocator = Nominatim(user_agent="restaurant_postal_code_fetcher")
 
 # Define input and output file paths in the current working directory
 input_file = os.path.join(os.getcwd(), 'parsed_restaurants_paris.json')
@@ -27,17 +27,15 @@ for restaurant in restaurants:
     
     if address:
         try:
-            # Use Google Places API to geocode the address
-            geocode_result = gmaps.geocode(address)
-            if geocode_result:
-                # Extract postal code from the first result
-                for component in geocode_result[0].get('address_components', []):
-                    if 'postal_code' in component.get('types', []):
-                        postal_code = component['long_name']
-                        break
-        except (ApiError, TransportError, Timeout) as e:
+            # Use Nominatim to geocode the address
+            location = geolocator.geocode(address, timeout=10)
+            if location and 'postcode' in location.raw.get('address', {}):
+                postal_code = location.raw['address']['postcode']
+            # Respect Nominatim's rate limit (1 request per second)
+            sleep(1)
+        except (GeocoderTimedOut, GeocoderServiceError) as e:
             print(f"Error fetching postal code for address '{address}': {e}")
-            postal_code = None  # Set to None if API call fails
+            postal_code = None  # Set to None if geocoding fails
     
     # Create the output dictionary with only the requested fields
     restaurant_info = {
@@ -49,7 +47,7 @@ for restaurant in restaurants:
     result.append(restaurant_info)
 
 # Write the result to a new JSON file
-with open(output_file, 'w') as f:
+with open(output_file, 'w', encoding='utf-8') as f:
     json.dump(result, f, indent=2)
 
 print(f"Output written to {output_file}")
