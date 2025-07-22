@@ -12,7 +12,7 @@ input_file = os.path.join(os.getcwd(), 'parsed_restaurants_paris.json')
 output_file = os.path.join(os.getcwd(), 'processed_restaurants.json')
 
 # Read the input JSON file
-with open(input_file, 'r') as f:
+with open(input_file, 'r', encoding='utf-8') as f:
     restaurants = json.load(f)
 
 # Process the data to extract name, address, and postalCode
