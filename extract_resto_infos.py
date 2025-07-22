@@ -1,11 +1,6 @@
 import json
 import os
-import requests
-from urllib.parse import quote
 import sys
-
-# Geoapify API key (replace with your actual key)
-GEOAPIFY_API_KEY = 'YOUR_GEOAPIFY_API_KEY'
 
 # Define input and output file paths in the current working directory
 input_file = os.path.join(os.getcwd(), 'parsed_restaurants_paris.json')
@@ -26,49 +21,23 @@ except json.JSONDecodeError as e:
     print(f"Error: Invalid JSON in '{input_file}': {e}")
     sys.exit(1)
 
-# Process the data to extract name, address, and postalCode
+# Process the data to extract name and address only
 result = []
 for i, restaurant in enumerate(restaurants, 1):
     # Extract restaurant_name as name
     name = restaurant.get('restaurant_name')
     print(f"Processing restaurant {i}/{len(restaurants)}: {name or 'Unnamed'}")
     
-    # Extract address and determine postalCode
+    # Extract address
     address = restaurant.get('address')
-    postal_code = None  # Default to None if address is missing or no postal code found
-    
-    if address:
-        print(f"  Fetching postal code for address: {address}")
-        try:
-            # Encode the address for the URL
-            encoded_address = quote(address)
-            url = f"https://api.geoapify.com/v1/geocode/search?text={encoded_address}&apiKey={GEOAPIFY_API_KEY}"
-            
-            # Make the API request
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()  # Raise an error for bad status codes
-            data = response.json()
-            
-            # Extract postal code from the first result
-            if data.get('features'):
-                properties = data['features'][0].get('properties', {})
-                postal_code = properties.get('postcode')
-                print(f"  Postal code found: {postal_code or 'None'}")
-            else:
-                print(f"  No results found for address: {address}")
-        except requests.RequestException as e:
-            print(f"  Error fetching postal code for address '{address}': {e}")
-            postal_code = None
-    else:
+    if not address:
         print(f"  No address provided for {name or 'Unnamed'}")
     
     # Create the output dictionary with only the requested fields
     restaurant_info = {
         'name': name,
-        'address': address,
-        'postalCode': postal_code
+        'address': address
     }
-    
     result.append(restaurant_info)
 
 # Write the result to a new JSON file
